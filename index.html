@@ -9,12 +9,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- 
         Chosen Palette: Warm Neutrals (Slate, Zinc, Stone)
-        Application Structure Plan: A single-page dashboard layout is used to provide a comprehensive and immediate overview of the TAT data. The core interaction is a set of toggle buttons at the top that switch the entire dashboard's context between the two key processes: "Evaluation to Dictation" (TAT1) and "Dictation to Upload" (TAT2). This structure was chosen because it allows for direct and easy comparison between the two workflows. The layout consists of three main parts: 1) High-level KPI cards for at-a-glance metrics (Average, Min, Max). 2) A central bar chart for visual comparison and quick identification of outliers. 3) A detailed, sortable data table for granular analysis. Additionally, a new "Add Entry" section is introduced at the top to allow users to dynamically input new data, enhancing the interactive nature of the dashboard. This tiered approach (data input -> summary -> visual -> detail) supports various user analysis needs within a single, cohesive view.
+        Application Structure Plan: A single-page dashboard layout is used to provide a comprehensive and immediate overview of the TAT data. The core interaction is a set of toggle buttons at the top that switch the entire dashboard's context between the two key processes: "Evaluation to Dictation" (TAT1) and "Dictation to Upload" (TAT2). This structure was chosen because it allows for direct and easy comparison between the two workflows. The layout consists of three main parts: 1) High-level KPI cards for at-a-glance metrics (Average, Min, Max). 2) A central bar chart for visual comparison and quick identification of outliers. 3) A detailed, sortable data table for granular analysis. Additionally, a new "Add Entry" section is introduced at the top to allow users to dynamically input new data, enhancing the interactive nature of the dashboard. This tiered approach (data input -> summary -> visual -> detail) supports various user analysis needs within a single, cohesive view. A new "Select Provider" section allows for filtering the entire dashboard by specific providers.
         Visualization & Content Choices: 
         - Report Info: Summary statistics (Avg, Min, Max). Goal: Inform. Viz/Method: KPI Cards (HTML/Tailwind). Interaction: Dynamic update on view toggle. Justification: Provides immediate, high-level understanding of performance for the selected process.
-        - Report Info: Individual claimant TAT data. Goal: Compare/Analyze. Viz/Method: Vertical Bar Chart (Chart.js/Canvas). Interaction: Tooltips on hover, dynamic data update on view toggle. Justification: Excellent for visually comparing performance across many individual cases and spotting outliers or trends more effectively than a simple table.
-        - Report Info: Detailed TAT data per claimant. Goal: Detail/Lookup. Viz/Method: HTML Table. Interaction: Sortable columns, dynamic data update on view toggle, **new delete row functionality**. Justification: Allows users to find and examine specific records and sort the data based on different criteria (e.g., by name or by longest TAT), and now allows for removal of entries.
-        - Report Info: New data entry. Goal: Input/Extend. Viz/Method: HTML Form (text and date inputs, button). Interaction: User input, form submission, data validation, add to internal data arrays, dashboard refresh. Justification: Enables users to extend the dataset directly within the application for real-time analysis of new entries.
+        - Report Info: Individual claimant TAT data. Goal: Compare/Analyze. Viz/Method: Vertical Bar Chart (Chart.js/Canvas). Interaction: Tooltips on hover, dynamic data update on view toggle, color-coded bars based on TAT thresholds. Justification: Excellent for visually comparing performance across many individual cases and spotting outliers or trends more effectively than a simple table, with added visual cues for performance.
+        - Report Info: Detailed TAT data per claimant. Goal: Detail/Lookup. Viz/Method: HTML Table. Interaction: Sortable columns, dynamic data update on view toggle, new delete row functionality, filtering by provider and date range. Justification: Allows users to find and examine specific records and sort the data based on different criteria (e.g., by name or by longest TAT), and now allows for removal and filtering of entries for more targeted analysis.
+        - Report Info: New data entry. Goal: Input/Extend. Viz/Method: HTML Form (text and date inputs, button, provider dropdown). Interaction: User input, form submission, data validation, add to internal data arrays, dashboard refresh. Justification: Enables users to extend the dataset directly within the application for real-time analysis of new entries, now with provider assignment.
+        - Report Info: Provider selection. Goal: Filter/Focus. Viz/Method: HTML Buttons/Dropdown. Interaction: Click to filter dashboard data. Justification: Allows users to focus on specific provider performance.
         - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
     -->
     <style>
@@ -65,6 +66,11 @@
         .delete-btn:hover {
             background-color: #dc2626; /* red-600 */
         }
+        .provider-filter-btn.active {
+            background-color: #1e293b; /* slate-900 */
+            color: white;
+            border-color: #1e293b;
+        }
     </style>
 </head>
 <body class="antialiased text-slate-800">
@@ -107,11 +113,60 @@
                         <label for="input-uploaded-date" class="block text-sm font-medium text-slate-700">Date Report Uploaded</label>
                         <input type="date" id="input-uploaded-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-500 focus:ring-slate-500 sm:text-sm p-2">
                     </div>
+                    <div class="lg:col-span-1">
+                        <label for="input-provider" class="block text-sm font-medium text-slate-700">Assign Provider</label>
+                        <select id="input-provider" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-500 focus:ring-slate-500 sm:text-sm p-2">
+                            <option value="Provider 1">Provider 1</option>
+                            <option value="Provider 2">Provider 2</option>
+                            <option value="Provider 3">Provider 3</option>
+                        </select>
+                    </div>
                 </div>
                 <button id="add-entry-btn" class="mt-6 bg-slate-800 text-white font-semibold py-2 px-6 rounded-lg hover:bg-slate-700 transition duration-200">
                     Add Entry
                 </button>
                 <p id="feedback-message" class="mt-4 text-sm"></p>
+            </section>
+
+            <section class="bg-white p-6 rounded-lg shadow-sm mb-8">
+                <h2 class="text-xl font-bold mb-4 text-slate-900">Select Provider</h2>
+                <div class="flex justify-center mb-4">
+                    <div class="inline-flex rounded-lg shadow-sm" role="group">
+                        <button type="button" id="filter-provider-all" class="provider-filter-btn bg-slate-800 text-white ring-2 ring-slate-800 font-semibold py-2 px-4 rounded-l-lg" data-provider="All Providers">
+                            All Providers
+                        </button>
+                        <button type="button" id="filter-provider-1" class="provider-filter-btn bg-white text-slate-800 hover:bg-slate-100 font-semibold py-2 px-4" data-provider="Provider 1">
+                            Provider 1
+                        </button>
+                        <button type="button" id="filter-provider-2" class="provider-filter-btn bg-white text-slate-800 hover:bg-slate-100 font-semibold py-2 px-4" data-provider="Provider 2">
+                            Provider 2
+                        </button>
+                        <button type="button" id="filter-provider-3" class="provider-filter-btn bg-white text-slate-800 hover:bg-slate-100 font-semibold py-2 px-4 rounded-r-lg" data-provider="Provider 3">
+                            Provider 3
+                        </button>
+                    </div>
+                </div>
+                <h2 class="text-xl font-bold mb-4 text-slate-900">Filters</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                        <label for="filter-name" class="block text-sm font-medium text-slate-700">Filter by Claimant Name</label>
+                        <input type="text" id="filter-name" placeholder="e.g., Susana" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-500 focus:ring-slate-500 sm:text-sm p-2">
+                    </div>
+                    <div>
+                        <label for="filter-start-date" class="block text-sm font-medium text-slate-700">Start Date</label>
+                        <input type="date" id="filter-start-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-500 focus:ring-slate-500 sm:text-sm p-2">
+                    </div>
+                    <div>
+                        <label for="filter-end-date" class="block text-sm font-medium text-slate-700">End Date</label>
+                        <input type="date" id="filter-end-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-slate-500 focus:ring-slate-500 sm:text-sm p-2">
+                    </div>
+                </div>
+                <button id="apply-filters-btn" class="mt-6 bg-slate-800 text-white font-semibold py-2 px-6 rounded-lg hover:bg-slate-700 transition duration-200">
+                    Apply Filters
+                </button>
+                <button id="clear-filters-btn" class="mt-6 ml-4 bg-gray-200 text-slate-800 font-semibold py-2 px-6 rounded-lg hover:bg-gray-300 transition duration-200">
+                    Clear Filters
+                </button>
             </section>
 
             <section id="kpi-section" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -157,17 +212,21 @@
             
             let dataIdCounter = 0; // To assign unique IDs
 
-            // Helper to assign IDs to initial data
-            function assignIds(data) {
-                return data.map(item => {
+            // Helper to assign IDs and initial providers to data
+            function assignIdsAndProviders(data, providerNames) {
+                return data.map((item, index) => {
                     if (!item.id) {
                         item.id = dataIdCounter++;
                     }
+                    // Assign providers in a round-robin fashion for initial data
+                    item.provider = providerNames[index % providerNames.length];
                     return item;
                 });
             }
 
-            let tat1Data = assignIds([
+            const initialProviders = ['Provider 1', 'Provider 2', 'Provider 3'];
+
+            let tat1Data = assignIdsAndProviders([
                 { name: 'Gallegos, Susana', evalDateStr: 'June 04, 2025', receivedDateStr: 'June 05, 2025' },
                 { name: 'Lopez, Steven', evalDateStr: 'June 04, 2025', receivedDateStr: 'June 05, 2025' },
                 { name: 'Vasquez, Omar', evalDateStr: 'June 04, 2025', receivedDateStr: 'June 26, 2025' },
@@ -196,9 +255,9 @@
                 { name: 'Mora, Mark', evalDateStr: 'July 23, 2025', receivedDateStr: 'July 29, 2025' },
                 { name: 'Curtis, Nolan', evalDateStr: 'July 29, 2025', receivedDateStr: 'July 31, 2025' },
                 { name: 'Rivera, Yvonne', evalDateStr: 'July 30, 2025', receivedDateStr: 'July 31, 2025' },
-            ]);
+            ], initialProviders);
 
-            let tat2Data = assignIds([
+            let tat2Data = assignIdsAndProviders([
                 { name: 'Gallegos, Susana', receivedDateStr: 'June 05, 2025', uploadedDateStr: 'June 19, 2025' },
                 { name: 'Lopez, Steven', receivedDateStr: 'June 05, 2025', uploadedDateStr: 'June 16, 2025' },
                 { name: 'Vasquez, Omar', receivedDateStr: 'June 26, 2025', uploadedDateStr: 'July 01, 2025' },
@@ -220,10 +279,11 @@
                 { name: 'Namowicz, Caleb', receivedDateStr: 'July 10, 2025', uploadedDateStr: 'July 17, 2025' },
                 { name: 'Sanchez, Peter', receivedDateStr: 'July 22, 2025', uploadedDateStr: 'August 01, 2025' },
                 { name: 'Johnson, Jimmie', receivedDateStr: 'July 22, 2025', uploadedDateStr: 'July 31, 2025' },
-            ]);
+            ], initialProviders);
             
             let currentView = 'tat1';
             let currentSort = { column: 'days', order: 'desc' };
+            let currentProviderFilter = 'All Providers'; // New state variable for provider filter
             
             const btnTat1 = document.getElementById('btn-tat1');
             const btnTat2 = document.getElementById('btn-tat2');
@@ -240,8 +300,18 @@
             const inputEvalDateEl = document.getElementById('input-eval-date');
             const inputReceivedDateEl = document.getElementById('input-received-date');
             const inputUploadedDateEl = document.getElementById('input-uploaded-date');
+            const inputProviderEl = document.getElementById('input-provider'); // New provider input
             const addEntryBtn = document.getElementById('add-entry-btn');
             const feedbackMessageEl = document.getElementById('feedback-message');
+
+            // Filter elements
+            const filterNameEl = document.getElementById('filter-name');
+            const filterStartDateEl = document.getElementById('filter-start-date');
+            const filterEndDateEl = document.getElementById('filter-end-date');
+            const applyFiltersBtn = document.getElementById('apply-filters-btn');
+            const clearFiltersBtn = document.getElementById('clear-filters-btn');
+            const providerFilterButtons = document.querySelectorAll('.provider-filter-btn'); // New provider filter buttons
+
 
             const ctx = document.getElementById('tatChart').getContext('2d');
             let tatChart = new Chart(ctx, {
@@ -251,8 +321,8 @@
                     datasets: [{
                         label: 'Turnaround Time (Days)',
                         data: [],
-                        backgroundColor: 'rgba(51, 65, 85, 0.8)',
-                        borderColor: 'rgba(51, 65, 85, 1)',
+                        backgroundColor: [], // Will be dynamic
+                        borderColor: [], // Will be dynamic
                         borderWidth: 1,
                         borderRadius: 4,
                     }]
@@ -302,8 +372,58 @@
                 return (endDate - startDate) / (1000 * 60 * 60 * 24);
             }
 
+            function getBarColor(days) {
+                if (days < 7) {
+                    return 'rgba(34, 197, 94, 0.8)'; // Green-500
+                } else if (days >= 7 && days <= 14) {
+                    return 'rgba(234, 179, 8, 0.8)'; // Yellow-500
+                } else {
+                    return 'rgba(239, 68, 68, 0.8)'; // Red-500
+                }
+            }
+
+            function getBorderColor(days) {
+                if (days < 7) {
+                    return 'rgba(34, 197, 94, 1)'; // Green-500
+                } else if (days >= 7 && days <= 14) {
+                    return 'rgba(234, 179, 8, 1)'; // Yellow-500
+                } else {
+                    return 'rgba(239, 68, 68, 1)'; // Red-500
+                }
+            }
+
             function updateDashboard() {
-                const data = currentView === 'tat1' ? tat1Data : tat2Data;
+                let data = currentView === 'tat1' ? [...tat1Data] : [...tat2Data]; // Use spread to create a shallow copy for filtering
+
+                // Apply Provider Filter
+                if (currentProviderFilter !== 'All Providers') {
+                    data = data.filter(item => item.provider === currentProviderFilter);
+                }
+
+                // Apply Name Filter
+                const nameFilterValue = filterNameEl.value.trim().toLowerCase();
+                if (nameFilterValue) {
+                    data = data.filter(item => item.name.toLowerCase().includes(nameFilterValue));
+                }
+
+                // Apply Date Range Filter
+                const startDateFilterValue = filterStartDateEl.value;
+                const endDateFilterValue = filterEndDateEl.value;
+
+                if (startDateFilterValue && endDateFilterValue) {
+                    const filterStartDate = new Date(startDateFilterValue);
+                    const filterEndDate = new Date(endDateFilterValue);
+
+                    data = data.filter(item => {
+                        let itemDate;
+                        if (currentView === 'tat1') {
+                            itemDate = new Date(item.evalDateStr);
+                        } else { // tat2
+                            itemDate = new Date(item.receivedDateStr);
+                        }
+                        return itemDate >= filterStartDate && itemDate <= filterEndDate;
+                    });
+                }
                 
                 // Calculate 'days' for each item based on the current view
                 const processedData = data.map(item => {
@@ -332,8 +452,13 @@
             }
 
             function updateChart(data) {
+                const backgroundColors = data.map(item => getBarColor(item.days));
+                const borderColors = data.map(item => getBorderColor(item.days));
+
                 tatChart.data.labels = data.map(d => d.name);
                 tatChart.data.datasets[0].data = data.map(d => d.days);
+                tatChart.data.datasets[0].backgroundColor = backgroundColors;
+                tatChart.data.datasets[0].borderColor = borderColors;
                 tatChart.data.datasets[0].label = currentView === 'tat1' ? 'TAT (Evaluation to Dictation)' : 'TAT (Dictation to Upload)';
                 tatChart.update();
             }
@@ -343,8 +468,8 @@
                 dataTableEl.innerHTML = '';
 
                 const headers = currentView === 'tat1' 
-                    ? { name: 'Claimant', evalDateStr: 'Eval Date', receivedDateStr: 'Received Date', days: 'TAT (Days)', actions: 'Actions' }
-                    : { name: 'Claimant', receivedDateStr: 'Received Date', uploadedDateStr: 'Uploaded Date', days: 'TAT (Days)', actions: 'Actions' };
+                    ? { name: 'Claimant', provider: 'Provider', evalDateStr: 'Eval Date', receivedDateStr: 'Received Date', days: 'TAT (Days)', actions: 'Actions' }
+                    : { name: 'Claimant', provider: 'Provider', receivedDateStr: 'Received Date', uploadedDateStr: 'Uploaded Date', days: 'TAT (Days)', actions: 'Actions' };
 
                 for (const key in headers) {
                     const th = document.createElement('th');
@@ -407,9 +532,10 @@
                 const evalDateInput = inputEvalDateEl.value; // YYYY-MM-DD
                 const receivedDateInput = inputReceivedDateEl.value; // YYYY-MM-DD
                 const uploadedDateInput = inputUploadedDateEl.value; // YYYY-MM-DD
+                const provider = inputProviderEl.value; // Get selected provider
 
                 // Validate inputs
-                if (!name || !evalDateInput || !receivedDateInput || !uploadedDateInput) {
+                if (!name || !evalDateInput || !receivedDateInput || !uploadedDateInput || !provider) {
                     feedbackMessageEl.textContent = 'Please fill all fields.';
                     feedbackMessageEl.className = 'mt-4 text-sm text-red-600';
                     return;
@@ -436,6 +562,7 @@
                 tat1Data.push({
                     id: newId,
                     name: name,
+                    provider: provider, // Add provider
                     evalDateStr: formattedEvalDate,
                     receivedDateStr: formattedReceivedDate
                 });
@@ -444,6 +571,7 @@
                 tat2Data.push({
                     id: newId,
                     name: name,
+                    provider: provider, // Add provider
                     receivedDateStr: formattedReceivedDate,
                     uploadedDateStr: formattedUploadedDate
                 });
@@ -453,6 +581,7 @@
                 inputEvalDateEl.value = '';
                 inputReceivedDateEl.value = '';
                 inputUploadedDateEl.value = '';
+                inputProviderEl.value = 'Provider 1'; // Reset to default provider
 
                 feedbackMessageEl.textContent = 'Entry added successfully!';
                 feedbackMessageEl.className = 'mt-4 text-sm text-green-600';
@@ -515,6 +644,31 @@
             });
             
             addEntryBtn.addEventListener('click', addEntry);
+            applyFiltersBtn.addEventListener('click', updateDashboard);
+            clearFiltersBtn.addEventListener('click', () => {
+                filterNameEl.value = '';
+                filterStartDateEl.value = '';
+                filterEndDateEl.value = '';
+                updateDashboard();
+            });
+
+            // New: Provider filter button event listeners
+            providerFilterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const provider = button.dataset.provider;
+                    currentProviderFilter = provider;
+
+                    // Update active button styling
+                    providerFilterButtons.forEach(btn => {
+                        btn.classList.remove('active', 'bg-slate-800', 'text-white', 'ring-2', 'ring-slate-800');
+                        btn.classList.add('bg-white', 'text-slate-800', 'hover:bg-slate-100');
+                    });
+                    button.classList.add('active', 'bg-slate-800', 'text-white', 'ring-2', 'ring-slate-800');
+                    button.classList.remove('bg-white', 'text-slate-800', 'hover:bg-slate-100');
+
+                    updateDashboard();
+                });
+            });
 
             updateDashboard();
         });
