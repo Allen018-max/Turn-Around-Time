@@ -212,73 +212,70 @@
             
             let dataIdCounter = 0; // To assign unique IDs
 
-            // Helper to assign IDs and initial providers to data
-            function assignIdsAndProviders(data, providerNames) {
-                return data.map((item, index) => {
+            // Helper to assign IDs to data
+            function assignIds(data) {
+                return data.map(item => {
                     if (!item.id) {
                         item.id = dataIdCounter++;
                     }
-                    // Assign providers in a round-robin fashion for initial data
-                    item.provider = providerNames[index % providerNames.length];
                     return item;
                 });
             }
 
-            const initialProviders = ['Provider 1', 'Provider 2', 'Provider 3'];
+            // All initial data assigned to Provider 1
+            let tat1Data = assignIds([
+                { name: 'Gallegos, Susana', provider: 'Provider 1', evalDateStr: 'June 04, 2025', receivedDateStr: 'June 05, 2025' },
+                { name: 'Lopez, Steven', provider: 'Provider 1', evalDateStr: 'June 04, 2025', receivedDateStr: 'June 05, 2025' },
+                { name: 'Vasquez, Omar', provider: 'Provider 1', evalDateStr: 'June 04, 2025', receivedDateStr: 'June 26, 2025' },
+                { name: 'Sachs, Charles', provider: 'Provider 1', evalDateStr: 'June 11, 2025', receivedDateStr: 'June 18, 2025' },
+                { name: 'Gomez, Maria', provider: 'Provider 1', evalDateStr: 'June 11, 2025', receivedDateStr: 'June 18, 2025' },
+                { name: 'Lopez, Robert', provider: 'Provider 1', evalDateStr: 'June 11, 2025', receivedDateStr: 'June 18, 2025' },
+                { name: 'Mays, Gerald', provider: 'Provider 1', evalDateStr: 'June 11, 2025', receivedDateStr: 'June 18, 2025' },
+                { name: 'Longoria, Grace', provider: 'Provider 1', evalDateStr: 'June 18, 2025', receivedDateStr: 'June 25, 2025' },
+                { name: 'Coury Curtis', provider: 'Provider 1', evalDateStr: 'June 18, 2025', receivedDateStr: 'July 01, 2025' },
+                { name: 'Orozco, Maria', provider: 'Provider 1', evalDateStr: 'June 18, 2025', receivedDateStr: 'June 25, 2025' },
+                { name: 'Galleano, Melissa', provider: 'Provider 1', evalDateStr: 'June 18, 2025', receivedDateStr: 'June 25, 2025' },
+                { name: 'Vasquez, Tara', provider: 'Provider 1', evalDateStr: 'June 26, 2025', receivedDateStr: 'July 01, 2025' },
+                { name: 'Toscano, Kelly', provider: 'Provider 1', evalDateStr: 'June 25, 2025', receivedDateStr: 'June 27, 2025' },
+                { name: 'Shields, Antwon', provider: 'Provider 1', evalDateStr: 'July 01, 2025', receivedDateStr: 'July 01, 2025' },
+                { name: 'Inge, Oswin', provider: 'Provider 1', evalDateStr: 'June 25, 2025', receivedDateStr: 'July 01, 2025' },
+                { name: 'Radgowski, Becky', provider: 'Provider 1', evalDateStr: 'June 25, 2025', receivedDateStr: 'July 01, 2025' },
+                { name: 'Franklin, Christopher', provider: 'Provider 1', evalDateStr: 'July 02, 2025', receivedDateStr: 'July 10, 2025' },
+                { name: 'Cox, Syreeta', provider: 'Provider 1', evalDateStr: 'July 02, 2025', receivedDateStr: 'July 10, 2025' },
+                { name: 'Namowicz, Caleb', provider: 'Provider 1', evalDateStr: 'July 02, 2025', receivedDateStr: 'July 10, 2025' },
+                { name: 'Sanchez, Peter', provider: 'Provider 1', evalDateStr: 'July 16, 2025', receivedDateStr: 'July 22, 2025' },
+                { name: 'Johnson, Jimmie', provider: 'Provider 1', evalDateStr: 'July 16, 2025', receivedDateStr: 'July 22, 2025' },
+                { name: 'Sanchez, Loreto', provider: 'Provider 1', evalDateStr: 'July 23, 2025', receivedDateStr: 'July 29, 2025' },
+                { name: 'Pabros, Ruby', provider: 'Provider 1', evalDateStr: 'July 23, 2025', receivedDateStr: 'July 29, 2025' },
+                { name: 'Haueisen, Heidi', provider: 'Provider 1', evalDateStr: 'July 23, 2025', receivedDateStr: 'July 29, 2025' },
+                { name: 'Mora, Mark', provider: 'Provider 1', evalDateStr: 'July 23, 2025', receivedDateStr: 'July 29, 2025' },
+                { name: 'Curtis, Nolan', provider: 'Provider 1', evalDateStr: 'July 29, 2025', receivedDateStr: 'July 31, 2025' },
+                { name: 'Rivera, Yvonne', provider: 'Provider 1', evalDateStr: 'July 30, 2025', receivedDateStr: 'July 31, 2025' },
+            ]);
 
-            let tat1Data = assignIdsAndProviders([
-                { name: 'Gallegos, Susana', evalDateStr: 'June 04, 2025', receivedDateStr: 'June 05, 2025' },
-                { name: 'Lopez, Steven', evalDateStr: 'June 04, 2025', receivedDateStr: 'June 05, 2025' },
-                { name: 'Vasquez, Omar', evalDateStr: 'June 04, 2025', receivedDateStr: 'June 26, 2025' },
-                { name: 'Sachs, Charles', evalDateStr: 'June 11, 2025', receivedDateStr: 'June 18, 2025' },
-                { name: 'Gomez, Maria', evalDateStr: 'June 11, 2025', receivedDateStr: 'June 18, 2025' },
-                { name: 'Lopez, Robert', evalDateStr: 'June 11, 2025', receivedDateStr: 'June 18, 2025' },
-                { name: 'Mays, Gerald', evalDateStr: 'June 11, 2025', receivedDateStr: 'June 18, 2025' },
-                { name: 'Longoria, Grace', evalDateStr: 'June 18, 2025', receivedDateStr: 'June 25, 2025' },
-                { name: 'Coury Curtis', evalDateStr: 'June 18, 2025', receivedDateStr: 'July 01, 2025' },
-                { name: 'Orozco, Maria', evalDateStr: 'June 18, 2025', receivedDateStr: 'June 25, 2025' },
-                { name: 'Galleano, Melissa', evalDateStr: 'June 18, 2025', receivedDateStr: 'June 25, 2025' },
-                { name: 'Vasquez, Tara', evalDateStr: 'June 26, 2025', receivedDateStr: 'July 01, 2025' },
-                { name: 'Toscano, Kelly', evalDateStr: 'June 25, 2025', receivedDateStr: 'June 27, 2025' },
-                { name: 'Shields, Antwon', evalDateStr: 'July 01, 2025', receivedDateStr: 'July 01, 2025' },
-                { name: 'Inge, Oswin', evalDateStr: 'June 25, 2025', receivedDateStr: 'July 01, 2025' },
-                { name: 'Radgowski, Becky', evalDateStr: 'June 25, 2025', receivedDateStr: 'July 01, 2025' },
-                { name: 'Franklin, Christopher', evalDateStr: 'July 02, 2025', receivedDateStr: 'July 10, 2025' },
-                { name: 'Cox, Syreeta', evalDateStr: 'July 02, 2025', receivedDateStr: 'July 10, 2025' },
-                { name: 'Namowicz, Caleb', evalDateStr: 'July 02, 2025', receivedDateStr: 'July 10, 2025' },
-                { name: 'Sanchez, Peter', evalDateStr: 'July 16, 2025', receivedDateStr: 'July 22, 2025' },
-                { name: 'Johnson, Jimmie', evalDateStr: 'July 16, 2025', receivedDateStr: 'July 22, 2025' },
-                { name: 'Sanchez, Loreto', evalDateStr: 'July 23, 2025', receivedDateStr: 'July 29, 2025' },
-                { name: 'Pabros, Ruby', evalDateStr: 'July 23, 2025', receivedDateStr: 'July 29, 2025' },
-                { name: 'Haueisen, Heidi', evalDateStr: 'July 23, 2025', receivedDateStr: 'July 29, 2025' },
-                { name: 'Mora, Mark', evalDateStr: 'July 23, 2025', receivedDateStr: 'July 29, 2025' },
-                { name: 'Curtis, Nolan', evalDateStr: 'July 29, 2025', receivedDateStr: 'July 31, 2025' },
-                { name: 'Rivera, Yvonne', evalDateStr: 'July 30, 2025', receivedDateStr: 'July 31, 2025' },
-            ], initialProviders);
-
-            let tat2Data = assignIdsAndProviders([
-                { name: 'Gallegos, Susana', receivedDateStr: 'June 05, 2025', uploadedDateStr: 'June 19, 2025' },
-                { name: 'Lopez, Steven', receivedDateStr: 'June 05, 2025', uploadedDateStr: 'June 16, 2025' },
-                { name: 'Vasquez, Omar', receivedDateStr: 'June 26, 2025', uploadedDateStr: 'July 01, 2025' },
-                { name: 'Sachs, Charles', receivedDateStr: 'June 18, 2025', uploadedDateStr: 'June 30, 2025' },
-                { name: 'Gomez, Maria', receivedDateStr: 'June 18, 2025', uploadedDateStr: 'June 26, 2025' },
-                { name: 'Lopez, Robert', receivedDateStr: 'June 18, 2025', uploadedDateStr: 'June 30, 2025' },
-                { name: 'Mays, Gerald', receivedDateStr: 'June 18, 2025', uploadedDateStr: 'June 30, 2025' },
-                { name: 'Longoria, Grace', receivedDateStr: 'June 25, 2025', uploadedDateStr: 'July 07, 2025' },
-                { name: 'Orozco, Maria', receivedDateStr: 'June 25, 2025', uploadedDateStr: 'July 22, 2025' },
-                { name: 'Galleano, Melissa', receivedDateStr: 'June 25, 2025', uploadedDateStr: 'July 22, 2025' },
-                { name: 'Vasquez, Tara', receivedDateStr: 'July 01, 2025', uploadedDateStr: 'July 03, 2025' },
-                { name: 'Toscano, Kelly', receivedDateStr: 'June 27, 2025', uploadedDateStr: 'July 11, 2025' },
-                { name: 'Vasquez, Omar', receivedDateStr: 'June 27, 2025', uploadedDateStr: 'July 02, 2025' },
-                { name: 'Shields, Antwon', receivedDateStr: 'July 01, 2025', uploadedDateStr: 'July 16, 2025' },
-                { name: 'Inge, Oswin', receivedDateStr: 'July 01, 2025', uploadedDateStr: 'July 14, 2025' },
-                { name: 'Radgowski, Becky', receivedDateStr: 'July 01, 2025', uploadedDateStr: 'July 10, 2025' },
-                { name: 'Franklin, Christopher', receivedDateStr: 'July 10, 2025', uploadedDateStr: 'July 18, 2025' },
-                { name: 'Cox, Syreeta', receivedDateStr: 'July 10, 2025', uploadedDateStr: 'July 18, 2025' },
-                { name: 'Namowicz, Caleb', receivedDateStr: 'July 10, 2025', uploadedDateStr: 'July 17, 2025' },
-                { name: 'Sanchez, Peter', receivedDateStr: 'July 22, 2025', uploadedDateStr: 'August 01, 2025' },
-                { name: 'Johnson, Jimmie', receivedDateStr: 'July 22, 2025', uploadedDateStr: 'July 31, 2025' },
-            ], initialProviders);
+            let tat2Data = assignIds([
+                { name: 'Gallegos, Susana', provider: 'Provider 1', receivedDateStr: 'June 05, 2025', uploadedDateStr: 'June 19, 2025' },
+                { name: 'Lopez, Steven', provider: 'Provider 1', receivedDateStr: 'June 05, 2025', uploadedDateStr: 'June 16, 2025' },
+                { name: 'Vasquez, Omar', provider: 'Provider 1', receivedDateStr: 'June 26, 2025', uploadedDateStr: 'July 01, 2025' },
+                { name: 'Sachs, Charles', provider: 'Provider 1', receivedDateStr: 'June 18, 2025', uploadedDateStr: 'June 30, 2025' },
+                { name: 'Gomez, Maria', provider: 'Provider 1', receivedDateStr: 'June 18, 2025', uploadedDateStr: 'June 26, 2025' },
+                { name: 'Lopez, Robert', provider: 'Provider 1', receivedDateStr: 'June 18, 2025', uploadedDateStr: 'June 30, 2025' },
+                { name: 'Mays, Gerald', provider: 'Provider 1', receivedDateStr: 'June 18, 2025', uploadedDateStr: 'June 30, 2025' },
+                { name: 'Longoria, Grace', provider: 'Provider 1', receivedDateStr: 'June 25, 2025', uploadedDateStr: 'July 07, 2025' },
+                { name: 'Orozco, Maria', provider: 'Provider 1', receivedDateStr: 'June 25, 2025', uploadedDateStr: 'July 22, 2025' },
+                { name: 'Galleano, Melissa', provider: 'Provider 1', receivedDateStr: 'June 25, 2025', uploadedDateStr: 'July 22, 2025' },
+                { name: 'Vasquez, Tara', provider: 'Provider 1', receivedDateStr: 'July 01, 2025', uploadedDateStr: 'July 03, 2025' },
+                { name: 'Toscano, Kelly', provider: 'Provider 1', receivedDateStr: 'June 27, 2025', uploadedDateStr: 'July 11, 2025' },
+                { name: 'Vasquez, Omar', provider: 'Provider 1', receivedDateStr: 'June 27, 2025', uploadedDateStr: 'July 02, 2025' },
+                { name: 'Shields, Antwon', provider: 'Provider 1', receivedDateStr: 'July 01, 2025', uploadedDateStr: 'July 16, 2025' },
+                { name: 'Inge, Oswin', provider: 'Provider 1', receivedDateStr: 'July 01, 2025', uploadedDateStr: 'July 14, 2025' },
+                { name: 'Radgowski, Becky', provider: 'Provider 1', receivedDateStr: 'July 01, 2025', uploadedDateStr: 'July 10, 2025' },
+                { name: 'Franklin, Christopher', provider: 'Provider 1', receivedDateStr: 'July 10, 2025', uploadedDateStr: 'July 18, 2025' },
+                { name: 'Cox, Syreeta', provider: 'Provider 1', receivedDateStr: 'July 10, 2025', uploadedDateStr: 'July 18, 2025' },
+                { name: 'Namowicz, Caleb', provider: 'Provider 1', receivedDateStr: 'July 10, 2025', uploadedDateStr: 'July 17, 2025' },
+                { name: 'Sanchez, Peter', provider: 'Provider 1', receivedDateStr: 'July 22, 2025', uploadedDateStr: 'August 01, 2025' },
+                { name: 'Johnson, Jimmie', provider: 'Provider 1', receivedDateStr: 'July 22, 2025', uploadedDateStr: 'July 31, 2025' },
+            ]);
             
             let currentView = 'tat1';
             let currentSort = { column: 'days', order: 'desc' };
