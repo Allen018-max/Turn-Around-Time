@@ -13,7 +13,7 @@
         Visualization & Content Choices: 
         - Report Info: Summary statistics (Avg, Min, Max). Goal: Inform. Viz/Method: KPI Cards (HTML/Tailwind). Interaction: Dynamic update on view toggle. Justification: Provides immediate, high-level understanding of performance for the selected process.
         - Report Info: Individual claimant TAT data. Goal: Compare/Analyze. Viz/Method: Vertical Bar Chart (Chart.js/Canvas). Interaction: Tooltips on hover, dynamic data update on view toggle. Justification: Excellent for visually comparing performance across many individual cases and spotting outliers or trends more effectively than a simple table.
-        - Report Info: Detailed TAT data per claimant. Goal: Detail/Lookup. Viz/Method: HTML Table. Interaction: Sortable columns, dynamic data update on view toggle. Justification: Allows users to find and examine specific records and sort the data based on different criteria (e.g., by name or by longest TAT).
+        - Report Info: Detailed TAT data per claimant. Goal: Detail/Lookup. Viz/Method: HTML Table. Interaction: Sortable columns, dynamic data update on view toggle, **new delete row functionality**. Justification: Allows users to find and examine specific records and sort the data based on different criteria (e.g., by name or by longest TAT), and now allows for removal of entries.
         - Report Info: New data entry. Goal: Input/Extend. Viz/Method: HTML Form (text and date inputs, button). Interaction: User input, form submission, data validation, add to internal data arrays, dashboard refresh. Justification: Enables users to extend the dataset directly within the application for real-time analysis of new entries.
         - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
     -->
@@ -52,6 +52,18 @@
         }
         th:hover {
             background-color: #f1f5f9; /* slate-100 */
+        }
+        .delete-btn {
+            background-color: #ef4444; /* red-500 */
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .delete-btn:hover {
+            background-color: #dc2626; /* red-600 */
         }
     </style>
 </head>
@@ -143,7 +155,19 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             
-            let tat1Data = [
+            let dataIdCounter = 0; // To assign unique IDs
+
+            // Helper to assign IDs to initial data
+            function assignIds(data) {
+                return data.map(item => {
+                    if (!item.id) {
+                        item.id = dataIdCounter++;
+                    }
+                    return item;
+                });
+            }
+
+            let tat1Data = assignIds([
                 { name: 'Gallegos, Susana', evalDateStr: 'June 04, 2025', receivedDateStr: 'June 05, 2025' },
                 { name: 'Lopez, Steven', evalDateStr: 'June 04, 2025', receivedDateStr: 'June 05, 2025' },
                 { name: 'Vasquez, Omar', evalDateStr: 'June 04, 2025', receivedDateStr: 'June 26, 2025' },
@@ -172,9 +196,9 @@
                 { name: 'Mora, Mark', evalDateStr: 'July 23, 2025', receivedDateStr: 'July 29, 2025' },
                 { name: 'Curtis, Nolan', evalDateStr: 'July 29, 2025', receivedDateStr: 'July 31, 2025' },
                 { name: 'Rivera, Yvonne', evalDateStr: 'July 30, 2025', receivedDateStr: 'July 31, 2025' },
-            ];
+            ]);
 
-            let tat2Data = [
+            let tat2Data = assignIds([
                 { name: 'Gallegos, Susana', receivedDateStr: 'June 05, 2025', uploadedDateStr: 'June 19, 2025' },
                 { name: 'Lopez, Steven', receivedDateStr: 'June 05, 2025', uploadedDateStr: 'June 16, 2025' },
                 { name: 'Vasquez, Omar', receivedDateStr: 'June 26, 2025', uploadedDateStr: 'July 01, 2025' },
@@ -196,7 +220,7 @@
                 { name: 'Namowicz, Caleb', receivedDateStr: 'July 10, 2025', uploadedDateStr: 'July 17, 2025' },
                 { name: 'Sanchez, Peter', receivedDateStr: 'July 22, 2025', uploadedDateStr: 'August 01, 2025' },
                 { name: 'Johnson, Jimmie', receivedDateStr: 'July 22, 2025', uploadedDateStr: 'July 31, 2025' },
-            ];
+            ]);
             
             let currentView = 'tat1';
             let currentSort = { column: 'days', order: 'desc' };
@@ -319,16 +343,18 @@
                 dataTableEl.innerHTML = '';
 
                 const headers = currentView === 'tat1' 
-                    ? { name: 'Claimant', evalDateStr: 'Eval Date', receivedDateStr: 'Received Date', days: 'TAT (Days)' }
-                    : { name: 'Claimant', receivedDateStr: 'Received Date', uploadedDateStr: 'Uploaded Date', days: 'TAT (Days)' };
+                    ? { name: 'Claimant', evalDateStr: 'Eval Date', receivedDateStr: 'Received Date', days: 'TAT (Days)', actions: 'Actions' }
+                    : { name: 'Claimant', receivedDateStr: 'Received Date', uploadedDateStr: 'Uploaded Date', days: 'TAT (Days)', actions: 'Actions' };
 
                 for (const key in headers) {
                     const th = document.createElement('th');
                     th.className = 'p-3 font-semibold text-slate-700';
                     th.textContent = headers[key];
-                    th.dataset.sort = key;
-                    if (key === currentSort.column) {
-                        th.textContent += currentSort.order === 'asc' ? ' ▲' : ' ▼';
+                    if (key !== 'actions') { // Only sortable columns get sort attributes
+                        th.dataset.sort = key;
+                        if (key === currentSort.column) {
+                            th.textContent += currentSort.order === 'asc' ? ' ▲' : ' ▼';
+                        }
                     }
                     tableHeaderEl.appendChild(th);
                 }
@@ -336,10 +362,20 @@
                 data.forEach(item => {
                     const tr = document.createElement('tr');
                     tr.className = 'border-b border-slate-100 hover:bg-slate-50';
+                    tr.dataset.id = item.id; // Store item ID on the row
+
                     for (const key in headers) {
                         const td = document.createElement('td');
                         td.className = 'p-3 text-slate-800';
-                        td.textContent = item[key];
+                        if (key === 'actions') {
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.textContent = 'Delete';
+                            deleteBtn.className = 'delete-btn';
+                            deleteBtn.dataset.id = item.id; // Store item ID on the button
+                            td.appendChild(deleteBtn);
+                        } else {
+                            td.textContent = item[key];
+                        }
                         tr.appendChild(td);
                     }
                     dataTableEl.appendChild(tr);
@@ -394,8 +430,11 @@
                 const formattedReceivedDate = formatDateForDisplay(receivedDateInput);
                 const formattedUploadedDate = formatDateForDisplay(uploadedDateInput);
 
+                const newId = dataIdCounter++;
+
                 // Add to tat1Data
                 tat1Data.push({
+                    id: newId,
                     name: name,
                     evalDateStr: formattedEvalDate,
                     receivedDateStr: formattedReceivedDate
@@ -403,6 +442,7 @@
 
                 // Add to tat2Data
                 tat2Data.push({
+                    id: newId,
                     name: name,
                     receivedDateStr: formattedReceivedDate,
                     uploadedDateStr: formattedUploadedDate
@@ -420,8 +460,27 @@
                 updateDashboard();
             }
 
+            function deleteEntry(idToDelete) {
+                // Filter out the entry from both data arrays
+                tat1Data = tat1Data.filter(item => item.id !== idToDelete);
+                tat2Data = tat2Data.filter(item => item.id !== idToDelete);
+                
+                feedbackMessageEl.textContent = 'Entry deleted successfully!';
+                feedbackMessageEl.className = 'mt-4 text-sm text-green-600';
+
+                updateDashboard(); // Re-render the dashboard with updated data
+            }
+
+            // Event delegation for delete buttons
+            dataTableEl.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-btn')) {
+                    const idToDelete = parseInt(e.target.dataset.id);
+                    deleteEntry(idToDelete);
+                }
+            });
+
             tableHeaderEl.addEventListener('click', (e) => {
-                if (e.target.tagName === 'TH') {
+                if (e.target.tagName === 'TH' && e.target.dataset.sort) {
                     const sortKey = e.target.dataset.sort;
                     if (currentSort.column === sortKey) {
                         currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
