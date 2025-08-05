@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turnaround Time Interactive Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- 
+        Chosen Palette: Warm Neutrals (Slate, Zinc, Stone)
+        Application Structure Plan: A single-page dashboard layout is used to provide a comprehensive and immediate overview of the TAT data. The core interaction is a set of toggle buttons at the top that switch the entire dashboard's context between the two key processes: "Evaluation to Dictation" (TAT1) and "Dictation to Upload" (TAT2). This structure was chosen because it allows for direct and easy comparison between the two workflows. The layout consists of three main parts: 1) High-level KPI cards for at-a-glance metrics (Average, Min, Max). 2) A central bar chart for visual comparison and quick identification of outliers. 3) A detailed, sortable data table for granular analysis. This tiered approach (summary -> visual -> detail) supports various user analysis needs within a single, cohesive view.
+        Visualization & Content Choices: 
+        - Report Info: Summary statistics (Avg, Min, Max). Goal: Inform. Viz/Method: KPI Cards (HTML/Tailwind). Interaction: Dynamic update on view toggle. Justification: Provides immediate, high-level understanding of performance for the selected process.
+        - Report Info: Individual claimant TAT data. Goal: Compare/Analyze. Viz/Method: Vertical Bar Chart (Chart.js/Canvas). Interaction: Tooltips on hover, dynamic data update on view toggle. Justification: Excellent for visually comparing performance across many individual cases and spotting outliers or trends more effectively than a simple table.
+        - Report Info: Detailed TAT data per claimant. Goal: Detail/Lookup. Viz/Method: HTML Table. Interaction: Sortable columns, dynamic data update on view toggle. Justification: Allows users to find and examine specific records and sort the data based on different criteria (e.g., by name or by longest TAT).
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .kpi-card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            max-height: 50vh;
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        th {
+            cursor: pointer;
+            user-select: none;
+        }
+        th:hover {
+            background-color: #f1f5f9; /* slate-100 */
+        }
+    </style>
+</head>
+<body class="antialiased text-slate-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-slate-900">Turnaround Time Interactive Dashboard</h1>
+            <p class="text-slate-600 mt-2">Analyze report generation efficiency from evaluation to upload.</p>
+        </header>
+
+        <div class="flex justify-center mb-8">
+            <div class="inline-flex rounded-lg shadow-sm" role="group">
+                <button type="button" id="btn-tat1" class="bg-slate-800 text-white ring-2 ring-slate-800 font-semibold py-2 px-6 rounded-l-lg">
+                    Evaluation to Dictation
+                </button>
+                <button type="button" id="btn-tat2" class="bg-white text-slate-800 hover:bg-slate-100 font-semibold py-2 px-6 rounded-r-lg">
+                    Dictation to Upload
+                </button>
+            </div>
+        </div>
+
+        <main id="dashboard-content">
+            <section id="kpi-section" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="kpi-card p-6 flex flex-col justify-between">
+                    <h2 class="text-slate-500 font-medium">Average Turnaround</h2>
+                    <p id="avg-tat" class="text-4xl font-bold text-slate-900 mt-2">0</p>
+                </div>
+                <div class="kpi-card p-6 flex flex-col justify-between">
+                    <h2 class="text-slate-500 font-medium">Minimum Turnaround</h2>
+                    <p id="min-tat" class="text-4xl font-bold text-green-600 mt-2">0</p>
+                </div>
+                <div class="kpi-card p-6 flex flex-col justify-between">
+                    <h2 class="text-slate-500 font-medium">Maximum Turnaround</h2>
+                    <p id="max-tat" class="text-4xl font-bold text-red-600 mt-2">0</p>
+                </div>
+            </section>
+            
+            <section class="grid grid-cols-1 xl:grid-cols-5 gap-8">
+                <div class="xl:col-span-3">
+                    <div class="chart-container">
+                        <canvas id="tatChart"></canvas>
+                    </div>
+                </div>
+                <div class="xl:col-span-2 bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-xl font-bold mb-4 text-slate-900">Detailed Breakdown</h2>
+                    <div class="table-container">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 border-b-2 border-slate-200 sticky top-0">
+                                <tr id="table-header">
+                                </tr>
+                            </thead>
+                            <tbody id="data-table">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            const tat1Data = [
+                { name: 'Gallegos, Susana', evalDate: 'June 04, 2025', receivedDate: 'June 05, 2025', days: 1 },
+                { name: 'Lopez, Steven', evalDate: 'June 04, 2025', receivedDate: 'June 05, 2025', days: 1 },
+                { name: 'Vasquez, Omar', evalDate: 'June 04, 2025', receivedDate: 'June 26, 2025', days: 22 },
+                { name: 'Sachs, Charles', evalDate: 'June 11, 2025', receivedDate: 'June 18, 2025', days: 7 },
+                { name: 'Gomez, Maria', evalDate: 'June 11, 2025', receivedDate: 'June 18, 2025', days: 7 },
+                { name: 'Lopez, Robert', evalDate: 'June 11, 2025', receivedDate: 'June 18, 2025', days: 7 },
+                { name: 'Mays, Gerald', evalDate: 'June 11, 2025', receivedDate: 'June 18, 2025', days: 7 },
+                { name: 'Longoria, Grace', evalDate: 'June 18, 2025', receivedDate: 'June 25, 2025', days: 7 },
+                { name: 'Coury Curtis', evalDate: 'June 18, 2025', receivedDate: 'July 01, 2025', days: 13 },
+                { name: 'Orozco, Maria', evalDate: 'June 18, 2025', receivedDate: 'June 25, 2025', days: 7 },
+                { name: 'Galleano, Melissa', evalDate: 'June 18, 2025', receivedDate: 'June 25, 2025', days: 7 },
+                { name: 'Vasquez, Tara', evalDate: 'June 26, 2025', receivedDate: 'July 01, 2025', days: 5 },
+                { name: 'Toscano, Kelly', evalDate: 'June 25, 2025', receivedDate: 'June 27, 2025', days: 2 },
+                { name: 'Vasquez, Omar', evalDate: 'June 04, 2025', receivedDate: 'June 27, 2025', days: 23 },
+                { name: 'Shields, Antwon', evalDate: 'July 01, 2025', receivedDate: 'July 01, 2025', days: 0 },
+                { name: 'Inge, Oswin', evalDate: 'June 25, 2025', receivedDate: 'July 01, 2025', days: 6 },
+                { name: 'Radgowski, Becky', evalDate: 'June 25, 2025', receivedDate: 'July 01, 2025', days: 6 },
+                { name: 'Franklin, Christopher', evalDate: 'July 02, 2025', receivedDate: 'July 10, 2025', days: 8 },
+                { name: 'Cox, Syreeta', evalDate: 'July 02, 2025', receivedDate: 'July 10, 2025', days: 8 },
+                { name: 'Namowicz, Caleb', evalDate: 'July 02, 2025', receivedDate: 'July 10, 2025', days: 8 },
+                { name: 'Sanchez, Peter', evalDate: 'July 16, 2025', receivedDate: 'July 22, 2025', days: 6 },
+                { name: 'Johnson, Jimmie', evalDate: 'July 16, 2025', receivedDate: 'July 22, 2025', days: 6 },
+                { name: 'Sanchez, Loreto', evalDate: 'July 23, 2025', receivedDate: 'July 29, 2025', days: 6 },
+                { name: 'Pabros, Ruby', evalDate: 'July 23, 2025', receivedDate: 'July 29, 2025', days: 6 },
+                { name: 'Haueisen, Heidi', evalDate: 'July 23, 2025', receivedDate: 'July 29, 2025', days: 6 },
+                { name: 'Mora, Mark', evalDate: 'July 23, 2025', receivedDate: 'July 29, 2025', days: 6 },
+                { name: 'Curtis, Nolan', evalDate: 'July 29, 2025', receivedDate: 'July 31, 2025', days: 2 },
+                { name: 'Rivera, Yvonne', evalDate: 'July 30, 2025', receivedDate: 'July 31, 2025', days: 1 },
+            ];
+
+            const tat2Data = [
+                { name: 'Gallegos, Susana', receivedDate: 'June 05, 2025', uploadedDate: 'June 19, 2025', days: 14 },
+                { name: 'Lopez, Steven', receivedDate: 'June 05, 2025', uploadedDate: 'June 16, 2025', days: 11 },
+                { name: 'Vasquez, Omar', receivedDate: 'June 26, 2025', uploadedDate: 'July 01, 2025', days: 5 },
+                { name: 'Sachs, Charles', receivedDate: 'June 18, 2025', uploadedDate: 'June 30, 2025', days: 12 },
+                { name: 'Gomez, Maria', receivedDate: 'June 18, 2025', uploadedDate: 'June 26, 2025', days: 8 },
+                { name: 'Lopez, Robert', receivedDate: 'June 18, 2025', uploadedDate: 'June 30, 2025', days: 12 },
+                { name: 'Mays, Gerald', receivedDate: 'June 18, 2025', uploadedDate: 'June 30, 2025', days: 12 },
+                { name: 'Longoria, Grace', receivedDate: 'June 25, 2025', uploadedDate: 'July 07, 2025', days: 12 },
+                { name: 'Orozco, Maria', receivedDate: 'June 25, 2025', uploadedDate: 'July 22, 2025', days: 27 },
+                { name: 'Galleano, Melissa', receivedDate: 'June 25, 2025', uploadedDate: 'July 22, 2025', days: 27 },
+                { name: 'Vasquez, Tara', receivedDate: 'July 01, 2025', uploadedDate: 'July 03, 2025', days: 2 },
+                { name: 'Toscano, Kelly', receivedDate: 'June 27, 2025', uploadedDate: 'July 11, 2025', days: 14 },
+                { name: 'Vasquez, Omar', receivedDate: 'June 27, 2025', uploadedDate: 'July 02, 2025', days: 5 },
+                { name: 'Shields, Antwon', receivedDate: 'July 01, 2025', uploadedDate: 'July 16, 2025', days: 15 },
+                { name: 'Inge, Oswin', receivedDate: 'July 01, 2025', uploadedDate: 'July 14, 2025', days: 13 },
+                { name: 'Radgowski, Becky', receivedDate: 'July 01, 2025', uploadedDate: 'July 10, 2025', days: 9 },
+                { name: 'Franklin, Christopher', receivedDate: 'July 10, 2025', uploadedDate: 'July 18, 2025', days: 8 },
+                { name: 'Cox, Syreeta', receivedDate: 'July 10, 2025', uploadedDate: 'July 18, 2025', days: 8 },
+                { name: 'Namowicz, Caleb', receivedDate: 'July 10, 2025', uploadedDate: 'July 17, 2025', days: 7 },
+                { name: 'Sanchez, Peter', receivedDate: 'July 22, 2025', uploadedDate: 'August 01, 2025', days: 10 },
+                { name: 'Johnson, Jimmie', receivedDate: 'July 22, 2025', uploadedDate: 'July 31, 2025', days: 9 },
+            ];
+            
+            let currentView = 'tat1';
+            let currentSort = { column: 'days', order: 'desc' };
+            
+            const btnTat1 = document.getElementById('btn-tat1');
+            const btnTat2 = document.getElementById('btn-tat2');
+            
+            const avgTatEl = document.getElementById('avg-tat');
+            const minTatEl = document.getElementById('min-tat');
+            const maxTatEl = document.getElementById('max-tat');
+            
+            const tableHeaderEl = document.getElementById('table-header');
+            const dataTableEl = document.getElementById('data-table');
+
+            const ctx = document.getElementById('tatChart').getContext('2d');
+            let tatChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Turnaround Time (Days)',
+                        data: [],
+                        backgroundColor: 'rgba(51, 65, 85, 0.8)',
+                        borderColor: 'rgba(51, 65, 85, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Days' }
+                        },
+                        x: {
+                            ticks: {
+                                autoSkip: false,
+                                maxRotation: 90,
+                                minRotation: 45
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.dataset.label}: ${context.parsed.y} days`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            function updateDashboard() {
+                const data = currentView === 'tat1' ? tat1Data : tat2Data;
+                
+                const days = data.map(d => d.days);
+                const avg = days.reduce((a, b) => a + b, 0) / days.length;
+                const min = Math.min(...days);
+                const max = Math.max(...days);
+
+                avgTatEl.textContent = avg.toFixed(2);
+                minTatEl.textContent = min;
+                maxTatEl.textContent = max;
+                
+                sortData(data);
+                
+                updateChart(data);
+                updateTable(data);
+            }
+
+            function updateChart(data) {
+                tatChart.data.labels = data.map(d => d.name);
+                tatChart.data.datasets[0].data = data.map(d => d.days);
+                tatChart.data.datasets[0].label = currentView === 'tat1' ? 'TAT (Evaluation to Dictation)' : 'TAT (Dictation to Upload)';
+                tatChart.update();
+            }
+
+            function updateTable(data) {
+                tableHeaderEl.innerHTML = '';
+                dataTableEl.innerHTML = '';
+
+                const headers = currentView === 'tat1' 
+                    ? { name: 'Claimant', evalDate: 'Eval Date', receivedDate: 'Received Date', days: 'TAT (Days)' }
+                    : { name: 'Claimant', receivedDate: 'Received Date', uploadedDate: 'Uploaded Date', days: 'TAT (Days)' };
+
+                for (const key in headers) {
+                    const th = document.createElement('th');
+                    th.className = 'p-3 font-semibold';
+                    th.textContent = headers[key];
+                    th.dataset.sort = key;
+                    if (key === currentSort.column) {
+                        th.textContent += currentSort.order === 'asc' ? ' ▲' : ' ▼';
+                    }
+                    tableHeaderEl.appendChild(th);
+                }
+
+                data.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-slate-100 hover:bg-slate-50';
+                    for (const key in headers) {
+                        const td = document.createElement('td');
+                        td.className = 'p-3';
+                        td.textContent = item[key];
+                        tr.appendChild(td);
+                    }
+                    dataTableEl.appendChild(tr);
+                });
+            }
+
+            function sortData(data) {
+                data.sort((a, b) => {
+                    const valA = a[currentSort.column];
+                    const valB = b[currentSort.column];
+                    
+                    let comparison = 0;
+                    if (valA > valB) {
+                        comparison = 1;
+                    } else if (valA < valB) {
+                        comparison = -1;
+                    }
+                    
+                    return currentSort.order === 'desc' ? comparison * -1 : comparison;
+                });
+            }
+
+            tableHeaderEl.addEventListener('click', (e) => {
+                if (e.target.tagName === 'TH') {
+                    const sortKey = e.target.dataset.sort;
+                    if (currentSort.column === sortKey) {
+                        currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSort.column = sortKey;
+                        currentSort.order = 'desc';
+                    }
+                    updateDashboard();
+                }
+            });
+
+            btnTat1.addEventListener('click', () => {
+                if (currentView !== 'tat1') {
+                    currentView = 'tat1';
+                    btnTat1.classList.add('bg-slate-800', 'text-white', 'ring-2', 'ring-slate-800');
+                    btnTat1.classList.remove('bg-white', 'text-slate-800', 'hover:bg-slate-100');
+                    btnTat2.classList.add('bg-white', 'text-slate-800', 'hover:bg-slate-100');
+                    btnTat2.classList.remove('bg-slate-800', 'text-white', 'ring-2', 'ring-slate-800');
+                    updateDashboard();
+                }
+            });
+
+            btnTat2.addEventListener('click', () => {
+                if (currentView !== 'tat2') {
+                    currentView = 'tat2';
+                    btnTat2.classList.add('bg-slate-800', 'text-white', 'ring-2', 'ring-slate-800');
+                    btnTat2.classList.remove('bg-white', 'text-slate-800', 'hover:bg-slate-100');
+                    btnTat1.classList.add('bg-white', 'text-slate-800', 'hover:bg-slate-100');
+                    btnTat1.classList.remove('bg-slate-800', 'text-white', 'ring-2', 'ring-slate-800');
+                    updateDashboard();
+                }
+            });
+            
+            updateDashboard();
+        });
+    </script>
+</body>
+</html>
